@@ -10,11 +10,11 @@ Run /root/set-env.sh and /root/init-stack.sh and have fun!
 
 ## What's bundled?
 
-Java 8
-Hadoop HDFS/Mapred and YARN version 2.7.4
-Hive 2.1.1 with MySQL datastore and spark execution engine
-Spark 2.2.0 with YARN and Hive Support
-PySpark 3.5 and Spark-Shell (Scala)
+* Java 8
+* Hadoop HDFS/Mapred and YARN version 2.7.4
+* Hive 2.1.1 with MySQL datastore and spark execution engine
+* Spark 2.2.0 with YARN and Hive Support
+* PySpark 3.5 and Spark-Shell (Scala)
 
 ## For impatient people.
 
