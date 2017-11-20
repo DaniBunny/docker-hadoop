@@ -1,0 +1,14 @@
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export HADOOP_PREFIX=/opt/hadoop
+export HADOOP_HOME=$HADOOP_PREFIX
+export HADOOP=$HADOOP_HOME
+export HIVE_HOME=/opt/hive
+export HIVE_LIB=$HIVE_HOME/lib
+export HIVE_BIN_PATH=$HIVE_HOME/bin
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+export YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop
+export SPARK_HOME=/opt/spark
+export SPARK_EXECUTOR_CORES=2
+export SPARK_EXECUTOR_MEMORY=3g
+export SPARK_DRIVER_MEMORY=1g
+export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$HIVE_BIN_PATH:$SPARK_HOME/bin

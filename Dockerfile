@@ -1,30 +1,43 @@
-FROM ubuntu:14.04
-MAINTAINER Angel Cervera Claudio <angelcervera@gmail.com>
+FROM ubuntu:latest
+MAINTAINER Daniel Coelho <daniel.bunny@gmail.com>
 
 USER root
 WORKDIR /root
 
-ENV HADOOP_VERSION 2.7.1
+ENV HADOOP_VERSION 2.7.4
 ENV HADOOP_PREFIX /opt/hadoop
+ENV HIVE_VERSION 2.1.1
+ENV HIVE_PREFIX /opt/hive
+ENV MYSQL_PWD sparkrulez
+RUN echo "mysql-server mysql-server/root_password password $MYSQL_PWD" | debconf-set-selections
+RUN echo "mysql-server mysql-server/root_password_again password $MYSQL_PWD" | debconf-set-selections
+ENV SPARK_VERSION 2.2.0
+ENV SPARK_PREFIX /opt/spark
+
 
 # Install all dependencies
-RUN apt-get update && apt-get install -y wget ssh rsync openjdk-7-jdk
+
+RUN apt-get update && apt-get install -y wget ssh rsync openjdk-8-jdk vim mysql-server libmysql-java
+
+# Install root ssh key
+COPY config/ssh_config /root/.ssh/config 
+RUN chmod 0600 /root/.ssh/config
+RUN ssh-keygen -q -t rsa -P '' -f /root/.ssh/id_rsa \
+    && cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys \
+    && chmod 0600 /root/.ssh/authorized_keys \
+    && chmod 0600 /root/.ssh/id_rsa.pub \
+    && chmod 0600 /root/.ssh \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+
+####### Hadoop Base
 
 # Download hadoop.
-RUN wget -O /tmp/hadoop-${HADOOP_VERSION}.tar.gz http://mirrors.whoishostingthis.com/apache/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz \
-    && wget -O /tmp/hadoop-${HADOOP_VERSION}.tar.gz.mds  http://mirrors.whoishostingthis.com/apache/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz.mds
+RUN wget -O /tmp/hadoop-${HADOOP_VERSION}.tar.gz http://mirrors.whoishostingthis.com/apache/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz 
 
 # Install hadoop
 RUN tar -C /opt -xf /tmp/hadoop-${HADOOP_VERSION}.tar.gz \
     && ln -s /opt/hadoop-${HADOOP_VERSION} ${HADOOP_PREFIX} \
     && mkdir /var/lib/hadoop
-
-# Install ssh key
-RUN ssh-keygen -q -t dsa -P '' -f /root/.ssh/id_dsa \
-    && cat /root/.ssh/id_dsa.pub >> /root/.ssh/authorized_keys
-
-# Config ssh to accept all connections from unknow hosts.
-COPY config/ssh_config /root/.ssh/config
 
 # Copy Hadoop config files
 COPY config/hadoop-env.sh ${HADOOP_PREFIX}/etc/hadoop/
@@ -44,9 +57,54 @@ RUN chmod a+x /root/docker_entrypoint.sh
 RUN mkdir /root/shared && \
     chmod a+rwX /root/shared
 
-# Clean
-RUN rm -r /var/cache/apt /var/lib/apt/lists /tmp/hadoop-${HADOOP_VERSION}.tar*
+####### Hive 
 
+RUN wget -O /tmp/apache-hive-${HIVE_VERSION}-bin.tar.gz http://mirrors.whoishostingthis.com/apache/hive/hive-${HIVE_VERSION}/apache-hive-${HIVE_VERSION}-bin.tar.gz 
+
+# Install Hive
+RUN tar -C /opt -xf /tmp/apache-hive-${HIVE_VERSION}-bin.tar.gz \
+    && ln -s /opt/apache-hive-${HIVE_VERSION}-bin ${HIVE_PREFIX} \
+    && mkdir /var/lib/hive
+
+COPY config/hive-site.xml ${HIVE_PREFIX}/conf/
+
+####### MySQL setup for hive
+
+COPY config/hive-metastore-createdb.sql /root/hive-metastore-createdb.sql
+COPY config/hive-metastore-createuser.sql /root/hive-metastore-createuser.sql
+RUN ln -s /usr/share/java/mysql.jar ${HIVE_PREFIX}/lib/libmysql-java.jar
+RUN mkdir -p /var/lib/mysql \
+    && mkdir -p /var/run/mysqld \
+    && chown -R mysql:mysql /var/lib/mysql /var/run/mysqld \
+    && service mysql start \
+    && cd /opt/hive/scripts/metastore/upgrade/mysql \
+    && mysql -uroot -psparkrulez < /root/hive-metastore-createdb.sql \
+    && mysql -uroot -psparkrulez < /root/hive-metastore-createuser.sql
+
+####### Spark 
+
+RUN wget -O /tmp/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz http://mirrors.whoishostingthis.com/apache/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz
+
+# Install Spark
+RUN tar -C /opt -xf /tmp/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz \
+    && ln -s /opt/spark-${SPARK_VERSION}-bin-hadoop2.7 ${SPARK_PREFIX} \
+    && mkdir /var/lib/spark
+
+# Copy Spark config files
+COPY config/spark-env.sh ${SPARK_PREFIX}/conf/
+
+# Link Spark to Hive/Hadoop configs
+RUN ln -s ${HADOOP_PREFIX}/etc/hadoop/core-site.xml ${SPARK_PREFIX}/conf/core-site.xml 
+RUN ln -s ${HADOOP_PREFIX}/etc/hadoop/hdfs-site.xml ${SPARK_PREFIX}/conf/hdfs-site.xml 
+RUN ln -s ${HADOOP_PREFIX}/etc/hadoop/yarn-site.xml ${SPARK_PREFIX}/conf/yarn-site.xml 
+RUN ln -s ${HIVE_PREFIX}/conf/hive-site.xml ${SPARK_PREFIX}/conf/hive-site.xml 
+
+# Clean
+RUN rm -r /var/cache/apt /var/lib/apt/lists /tmp/hadoop-${HADOOP_VERSION}.tar* /tmp/apache-hive-${HIVE_VERSION}-bin.tar* /tmp/spark-${SPARK_VERSION}-bin*
+#RUN rm -r /var/cache/apt /var/lib/apt/lists /tmp/hadoop-${HADOOP_VERSION}.tar*  
+
+COPY config/set-env.sh /root/
+COPY config/init-stack.sh /root/
 
 ################### Expose ports
 
@@ -146,11 +204,8 @@ EXPOSE 22
 
 
 ################### Expose volumes
-VOLUME ["/opt/hadoop/logs", "/root/shared"]
+#VOLUME ["/opt/hadoop/logs", "/root/shared"]
 
 
 ################### Entry point
 ENTRYPOINT [ "/root/docker_entrypoint.sh" ]
-
-
-

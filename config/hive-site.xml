@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+<!--
+<property>
+  <name>hive.exec.reducers.max</name>
+  <value>1</value>
+  <description>maximum number of reducers</description>
+</property>
+-->
+<property>
+  <name>javax.jdo.option.ConnectionURL</name>
+  <value>jdbc:mysql://127.0.0.1/metastore?useSSL=false</value>
+</property>
+<property>
+  <name>javax.jdo.option.ConnectionDriverName</name>
+  <value>com.mysql.jdbc.Driver</value>
+</property>
+<property>
+  <name>javax.jdo.option.ConnectionUserName</name>
+  <value>hive</value>
+</property>
+<property>
+  <name>javax.jdo.option.ConnectionPassword</name>
+  <value>hiverulez</value>
+</property>
+<property>
+  <name>datanucleus.autoCreateSchema</name>
+  <value>false</value>
+</property>
+<property>
+  <name>datanucleus.fixedDatastore</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hive.metastore.uris</name>
+  <value>thrift://127.0.0.1:9083</value>
+</property>
+<property>
+  <name>hive.txn.manager</name>
+  <value>org.apache.hadoop.hive.ql.lockmgr.DbTxnManager</value>
+</property>
+<property>
+  <name>hive.compactor.initiator.on</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hive.compactor.worker.threads</name>
+  <value>1</value>
+</property>
+<property>
+  <name>hive.support.concurrency</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hive.server2.authentication</name>
+  <value>NONE</value>
+</property>
+</configuration>
